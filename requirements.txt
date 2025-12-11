@@ -1,0 +1,31 @@
+# Core dependencies
+requests>=2.28.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+
+# MLS API support
+rets>=2.0.0  # For RETS (Real Estate Transaction Standard)
+# Note: RESO Web API typically uses OAuth2 and standard REST
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Machine Learning for training
+scikit-learn>=1.3.0
+
+# Database (optional, for storing property data)
+sqlalchemy>=2.0.0
+
+# Utilities
+python-dateutil>=2.8.0
+geopy>=2.3.0  # For distance calculations
+beautifulsoup4>=4.12.0  # For HTML parsing (Oxylabs scraping)
+
+# Web interface
+flask>=3.0.0
+
+# PDF generation
+reportlab>=4.0.0
+

@@ -1,0 +1,44 @@
+# Test files (unless specifically debugging)
+test_*.py
+*_test.py
+
+# Logs
+*.log
+flask_app.log
+
+# Debug/result files
+*_debug.json
+*_results.txt
+comparison_results.txt
+antibot_test_results.txt
+oxylabs_test_results.txt
+
+# Generated reports
+reports/*.pdf
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+# Note: .vscode/settings.json is kept for workspace settings
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Learning data
+learning_data.json
+model.pkl
+
+# Environment
+.env

@@ -1,0 +1,128 @@
+[
+  {
+    "description": "Geographic boundaries: 0.5-1 mile in urban, up to 2 miles in suburban/rural",
+    "criteria": {
+      "max_distance_miles_urban": 1.0,
+      "max_distance_miles_suburban": 2.0,
+      "max_distance_miles_rural": 2.0
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Sales recency: 3-6 months (90 days if market moving quickly)",
+    "criteria": {
+      "max_age_months": 6,
+      "max_age_days_fast_market": 90
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Square footage: within +/- 20% of subject",
+    "criteria": {
+      "sqft_tolerance_percent": 20
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Beds/Baths: Match exactly if possible",
+    "criteria": {
+      "bedrooms_exact_match_preferred": true,
+      "bathrooms_exact_match_preferred": true
+    },
+    "priority": 1.5
+  },
+  {
+    "description": "Select 3-6 best comps with fewest adjustments",
+    "criteria": {
+      "min_comps": 3,
+      "max_comps": 6,
+      "prefer_fewest_adjustments": true
+    },
+    "priority": 1.5
+  },
+  {
+    "description": "Prioritize closed sales over pending listings",
+    "criteria": {
+      "prefer_sold_over_active": true
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Require arm's length transactions",
+    "criteria": {
+      "require_arms_length": true,
+      "exclude_distressed_sales": true,
+      "exclude_family_transfers": true,
+      "exclude_estate_sales": true
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Note key differences for adjustments",
+    "criteria": {
+      "track_differences": true
+    },
+    "priority": 1.0
+  },
+  {
+    "description": "Adjust comp price: subtract if comp is better, add if comp is worse",
+    "criteria": {
+      "apply_adjustments": true,
+      "adjustment_rule": "comp_better_subtract_comp_worse_add"
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Location adjustments: busy street vs quiet cul-de-sac",
+    "criteria": {
+      "adjust_location": true
+    },
+    "priority": 1.5
+  },
+  {
+    "description": "Adjust for beds/baths/square footage differences",
+    "criteria": {
+      "adjust_beds_baths_sqft": true
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Adjust for condition and upgrades",
+    "criteria": {
+      "adjust_condition": true,
+      "adjust_upgrades": true
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Time adjustments: adjust older comps if market appreciating",
+    "criteria": {
+      "adjust_for_time": true,
+      "market_appreciation_per_month": 0.01
+    },
+    "priority": 1.0
+  },
+  {
+    "description": "Add back seller concessions to find true market value",
+    "criteria": {
+      "add_back_concessions": true
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Weight best comps: more similar = more weight, fewer adjustments = more weight",
+    "criteria": {
+      "weight_by_similarity": true,
+      "weight_by_adjustment_count": true,
+      "weight_by_adjustment_size": true
+    },
+    "priority": 2.0
+  },
+  {
+    "description": "Calculate weighted average of adjusted prices",
+    "criteria": {
+      "use_weighted_average": true
+    },
+    "priority": 2.0
+  }
+]

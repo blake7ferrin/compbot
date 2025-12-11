@@ -1,0 +1,123 @@
+# Cursor Rules for MLS Comp Bot Project
+
+## Project Overview
+This is a Flask-based real estate comparable property analysis bot that integrates with multiple APIs (ATTOM, Estated, Oxylabs) to extract and analyze property data.
+
+## Code Style & Patterns
+
+### Python Standards
+- Use type hints for all function parameters and return types
+- Follow PEP 8 style guide
+- Use Pydantic models for data validation (Property, CompResult, etc.)
+- Use f-strings for string formatting
+- Use logging instead of print statements for production code
+
+### Error Handling
+- Always use try/except blocks for API calls
+- Log warnings for non-critical failures (use logger.warning)
+- Log errors for critical failures (use logger.error)
+- Return None or empty lists instead of raising exceptions when possible
+- Include context in error messages (which API, which property, etc.)
+
+### API Integration Patterns
+- Always check if API is enabled before making calls
+- Use timeout parameters (30-120 seconds depending on API)
+- Implement fallback chains: ATTOM → Estated → Oxylabs → Estimation
+- Store API source in mls_data for debugging
+- Handle rate limits and 401/403 errors gracefully
+
+### Data Extraction
+- Always validate extracted data (use helper functions like _is_valid_cooling_type)
+- Filter out placeholder/invalid values (e.g., "REFRIGERATOR", "RoofMaterial")
+- Use regex patterns for flexible extraction
+- Handle missing data gracefully (None values are acceptable)
+- Extract to Property model fields first, then store extras in mls_data
+
+### HTML Parsing (Oxylabs)
+- Use BeautifulSoup for parsing
+- Check for CAPTCHA/verification pages before parsing
+- Use multiple selector strategies (class names, data attributes, regex)
+- Log samples of extracted content for debugging
+- Handle missing elements gracefully
+
+### Flask Web Interface
+- Use JSON responses for API endpoints
+- Include all Property model fields in JSON responses
+- Filter invalid values in frontend JavaScript
+- Display loading states for long-running operations (Oxylabs takes 30-90s)
+- Use consistent error messages
+
+## File Organization
+- `bot.py` - Main bot logic and orchestration
+- `attom_connector.py` - ATTOM API integration
+- `alternative_apis.py` - Estated, Oxylabs, RealtyMole connectors
+- `models.py` - Pydantic models (Property, CompResult, etc.)
+- `config.py` - Settings and configuration
+- `app.py` - Flask web application
+- `report_generator.py` - Report generation (PDF, HTML, Markdown)
+- `templates/` - HTML templates
+- `static/` - CSS, images, JavaScript
+
+## Common Patterns
+
+### Property Data Extraction
+```python
+# Always check for None before using
+if subject.bedrooms is None:
+    # Try fallback
+    if estated_prop and estated_prop.bedrooms:
+        subject.bedrooms = estated_prop.bedrooms
+```
+
+### API Fallback Chain
+```python
+# 1. ATTOM (primary)
+# 2. Estated (fallback #1)
+# 3. Oxylabs (fallback #2)
+# 4. Estimation (last resort)
+```
+
+### Data Validation
+```python
+# Use helper functions to filter invalid values
+if self._is_valid_cooling_type(cooling_type):
+    subject.cooling_type = cooling_type
+```
+
+## Testing
+- Test files should be in root directory with `test_` prefix
+- Use descriptive test names
+- Test both success and failure cases
+- Test API fallback chains
+- Test data validation and filtering
+
+## Documentation
+- Keep README.md updated
+- Document API setup in separate MD files (ATTOM_SETUP.md, etc.)
+- Include deprecation notices when APIs are being phased out
+- Document data source priorities and fallback chains
+
+## Environment Variables
+- Always check if env vars are set before using
+- Use settings from config.py (not direct os.getenv)
+- Never commit .env file
+- Document required env vars in setup guides
+
+## Important Notes
+- Estated API is deprecated (migrating to ATTOM in 2026)
+- Oxylabs scrapes Redfin/Zillow (ToS considerations)
+- ATTOM v2 API provides more complete data than v1
+- Always merge v2 data with v1 data when available
+- Property model fields should be preferred over mls_data when possible
+
+## Code Review Checklist
+- [ ] Type hints included
+- [ ] Error handling implemented
+- [ ] Logging added for debugging
+- [ ] Data validation applied
+- [ ] Invalid values filtered
+- [ ] API fallback chain considered
+- [ ] Timeout parameters set
+- [ ] None checks before accessing properties
+- [ ] Documentation updated if needed
+
