@@ -1,8 +1,9 @@
 """Flask web application for Robo Comp - AI Property Valuation."""
 
+import argparse
 import logging
-import sys
 import os
+import sys
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
@@ -428,7 +429,42 @@ def search():
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
 
 
+def _env_flag_is_true(value: str | None) -> bool:
+    """Convert truthy environment strings to boolean."""
+    if value is None:
+        return False
+    return value.lower() in {"1", "true", "yes", "on"}
+
+
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    # Using port 5050 since 5000 is often taken by macOS ControlCenter
-    app.run(debug=True, host="0.0.0.0", port=5050)
+    parser = argparse.ArgumentParser(description="Run the MLS Comp Bot web server.")
+    parser.add_argument(
+        "--host",
+        default=os.environ.get("FLASK_RUN_HOST", "0.0.0.0"),
+        help="Host/IP to bind (default: 0.0.0.0 or FLASK_RUN_HOST env).",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.environ.get("FLASK_RUN_PORT", "5050")),
+        help="Port to bind (default: 5050 or FLASK_RUN_PORT env).",
+    )
+    parser.add_argument(
+        "--debug",
+        dest="debug",
+        action="store_true",
+        default=_env_flag_is_true(os.environ.get("FLASK_DEBUG")),
+        help="Enable Flask debug mode. Can also set FLASK_DEBUG=1.",
+    )
+    parser.add_argument(
+        "--no-debug",
+        dest="debug",
+        action="store_false",
+        help="Disable Flask debug mode regardless of FLASK_DEBUG.",
+    )
+
+    args = parser.parse_args()
+    logging.info(
+        "Starting Flask server on %s:%s (debug=%s)", args.host, args.port, args.debug
+    )
+    app.run(debug=args.debug, host=args.host, port=args.port)
