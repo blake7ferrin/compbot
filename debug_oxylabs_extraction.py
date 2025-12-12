@@ -64,26 +64,26 @@ try:
         print("=" * 80)
         
         if subject.mls_data and subject.mls_data.get('source') == 'oxylabs_redfin':
-            print("✓ Data came from Oxylabs (Redfin)")
+            print("[OK] Data came from Oxylabs (Redfin)")
             if subject.mls_data.get('days_on_market'):
-                print("✓ Days on Market extracted")
+                print("[OK] Days on Market extracted")
             if subject.mls_data.get('property_description'):
-                print("✓ Property description extracted")
+                print("[OK] Property description extracted")
             if len(subject.amenities) > 1:
-                print(f"✓ Enhanced amenities extracted ({len(subject.amenities)} items)")
+                print(f"[OK] Enhanced amenities extracted ({len(subject.amenities)} items)")
             else:
-                print("⚠ Only basic amenities found")
+                print("[WARN] Only basic amenities found")
         elif subject.mls_data and subject.mls_data.get('source') == 'oxylabs_zillow':
-            print("✓ Data came from Oxylabs (Zillow)")
+            print("[OK] Data came from Oxylabs (Zillow)")
         else:
-            print("⚠ Data did NOT come from Oxylabs")
+            print("[WARN] Data did NOT come from Oxylabs")
             print(f"  Source: {subject.mls_data.get('source') if subject.mls_data else 'Unknown'}")
         
     else:
-        print("❌ No results returned")
+        print("[FAIL] No results returned")
         
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"[FAIL] Error: {e}")
     import traceback
     traceback.print_exc()
 
