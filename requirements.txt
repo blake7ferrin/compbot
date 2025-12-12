@@ -5,7 +5,8 @@ pydantic>=2.0.0
 pydantic-settings>=2.0.0
 
 # MLS API support
-rets>=2.0.0  # For RETS (Real Estate Transaction Standard)
+# Latest published on PyPI is 1.0.0; higher versions are unavailable.
+rets==1.0.0  # For RETS (Real Estate Transaction Standard)
 # Note: RESO Web API typically uses OAuth2 and standard REST
 
 # Data processing
