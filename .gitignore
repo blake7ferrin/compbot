@@ -47,6 +47,18 @@ Thumbs.db
 # Logs
 *.log
 
+# Debug/result artifacts (keep local, not in git)
+*_debug.json
+attom_response_debug.json
+*_results.txt
+comparison_results.txt
+antibot_test_results.txt
+oxylabs_test_results.txt
+debug_out.txt
+
+# Generated reports
+reports/*.pdf
+
 # Learning data
 learning_data.json
 model.pkl

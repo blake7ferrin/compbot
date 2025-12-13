@@ -26,7 +26,8 @@ An intelligent bot that connects to your MLS (Multiple Listing Service) and find
 
 3. **Configure your MLS connection:**
    ```bash
-   cp .env.example .env
+   # NOTE: this repo ships `env.example` (no leading dot) to avoid accidental commits
+   cp env.example .env
    ```
    
    Edit `.env` with your MLS credentials:
