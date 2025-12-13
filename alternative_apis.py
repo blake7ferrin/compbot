@@ -1204,18 +1204,113 @@ class PropertyRadarConnector(MLSConnector):
             logger.warning(f"PropertyRadar lookup failed: {e}")
             return None
 
-    def _find_radar_id(self, address: str, city: str, state: str, zip_code: str) -> Optional[str]:
-        """Find PropertyRadar's internal ID for a property."""
+    def _find_radar_id(
+        self, address: str, city: str, state: str, zip_code: str
+    ) -> Optional[str]:
+        """Find PropertyRadar's internal ID (RadarID) for a property.
+
+        Note: PropertyRadar's API typically uses RadarID for detailed lookups. This
+        method attempts an address-based search via the `/properties` endpoint.
+        """
         # Check cache first
         cache_key = f"{address}|{city}|{state}|{zip_code}"
         if cache_key in self._property_cache:
             cached = self._property_cache[cache_key]
             return cached.get("RadarID")
 
-        # This would require creating a list with the property first
-        # For now, we'll try the properties endpoint directly
-        logger.info(f"PropertyRadar: Searching for {address}, {city}, {state}")
-        return None  # Would need list-based lookup
+        if not self.connected:
+            raise ConnectionError("Not connected to PropertyRadar API")
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+
+        def _normalize(text: Optional[str]) -> str:
+            """Lowercase + collapse whitespace for matching."""
+            if not text:
+                return ""
+            return re.sub(r"\s+", " ", text).strip().lower()
+
+        target = _normalize(" ".join(filter(None, [address, city, state, zip_code])))
+
+        try:
+            params: Dict[str, Any] = {}
+            if address:
+                params["address"] = address
+            if city:
+                params["city"] = city
+            if state:
+                params["state"] = state
+            if zip_code:
+                params["zip"] = zip_code
+
+            logger.info(
+                f"PropertyRadar: Searching for RadarID for {address}, {city}, {state}"
+            )
+            response = requests.get(
+                f"{self.base_url}/properties",
+                headers=headers,
+                params=params,
+                timeout=30,
+            )
+
+            if response.status_code != 200:
+                logger.warning(
+                    f"PropertyRadar search failed: HTTP {response.status_code}"
+                )
+                return None
+
+            data = response.json()
+            results = data.get("results") or data.get("Results") or []
+
+            radar_id = None
+            for item in results:
+                candidate_radar = (
+                    item.get("RadarID") or item.get("radarId") or item.get("radar_id")
+                )
+                candidate_address = _normalize(
+                    " ".join(
+                        filter(
+                            None,
+                            [
+                                item.get("Address") or item.get("address"),
+                                item.get("City") or item.get("city"),
+                                item.get("State") or item.get("state"),
+                                item.get("ZipFive")
+                                or item.get("Zip")
+                                or item.get("zip"),
+                            ],
+                        )
+                    )
+                )
+
+                # Prefer exact normalized address match; otherwise take first available
+                if (
+                    target
+                    and candidate_address
+                    and target == candidate_address
+                    and candidate_radar
+                ):
+                    radar_id = candidate_radar
+                    break
+                if radar_id is None and candidate_radar:
+                    radar_id = candidate_radar
+
+            if radar_id:
+                self._property_cache[cache_key] = {"RadarID": radar_id}
+                return radar_id
+
+            logger.warning("PropertyRadar: No RadarID found for address search")
+            return None
+
+        except requests.exceptions.RequestException as e:
+            logger.warning(f"PropertyRadar search request failed: {e}")
+            return None
+        except Exception as e:
+            logger.warning(f"PropertyRadar search error: {e}")
+            return None
 
     def _get_property_by_radar_id(self, radar_id: str) -> Optional[Dict[str, Any]]:
         """Get full property data using RadarID."""

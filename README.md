@@ -29,6 +29,10 @@ An intelligent bot that connects to your MLS (Multiple Listing Service) and find
    # NOTE: this repo ships `env.example` (no leading dot) to avoid accidental commits
    cp env.example .env
    ```
+
+   Optional: enable PropertyRadar enrichment (investor data like equity / free-and-clear / cash buyer):
+   - Set `PROPERTYRADAR_ENABLED=true`
+   - Set `PROPERTYRADAR_API_KEY=...`
    
    Edit `.env` with your MLS credentials:
    - **For ATTOM (Recommended)**: Set `MLS_TYPE=ATTOM` and provide your ATTOM API key
@@ -50,6 +54,13 @@ python main.py --mls-number "123456"
 **Find comps by address:**
 ```bash
 python main.py --address "123 Main St" --city "Phoenix" --zip "85001"
+```
+
+### Optional: PropertyRadar smoke test
+If you’ve enabled PropertyRadar in `.env`, you can verify connectivity and address lookup with:
+
+```bash
+python debug_propertyradar.py
 ```
 
 **Find comps by criteria:**
