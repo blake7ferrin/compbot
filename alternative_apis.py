@@ -1210,7 +1210,8 @@ class PropertyRadarConnector(MLSConnector):
         """Find PropertyRadar's internal ID (RadarID) for a property.
 
         Note: PropertyRadar's API typically uses RadarID for detailed lookups. This
-        method attempts an address-based search via the `/properties` endpoint.
+        method attempts an address-based search via the documented
+        `POST /properties` "properties from criteria" endpoint.
         """
         # Check cache first
         cache_key = f"{address}|{city}|{state}|{zip_code}"
@@ -1236,34 +1237,68 @@ class PropertyRadarConnector(MLSConnector):
         target = _normalize(" ".join(filter(None, [address, city, state, zip_code])))
 
         try:
-            params: Dict[str, Any] = {}
-            if address:
-                params["address"] = address
-            if city:
-                params["city"] = city
+            # PropertyRadar expects a Criteria array in the request body.
+            # Docs: operation/POST/properties ("Properties from criteria")
+            criteria: List[Dict[str, Any]] = []
             if state:
-                params["state"] = state
+                criteria.append({"name": "State", "value": [state]})
+            if city:
+                criteria.append({"name": "City", "value": [city]})
             if zip_code:
-                params["zip"] = zip_code
+                try:
+                    zip_val: Any = int(str(zip_code).strip())
+                except Exception:
+                    zip_val = str(zip_code).strip()
+                criteria.append({"name": "ZipFive", "value": [zip_val]})
+
+            # Many accounts cannot use FullAddress. Prefer Address (street-only)
+            # plus City/State/ZipFive.
+            if address:
+                criteria.append({"name": "Address", "value": [address]})
 
             logger.info(
                 f"PropertyRadar: Searching for RadarID for {address}, {city}, {state}"
             )
-            response = requests.get(
+
+            # Avoid double-charging: try Purchase=0 for the search call.
+            # If the API returns no results, we can retry with Purchase=1.
+            search_params = {
+                "Purchase": "0",
+                "Limit": "5",
+            }
+            response = requests.post(
                 f"{self.base_url}/properties",
                 headers=headers,
-                params=params,
+                params=search_params,
+                json={"Criteria": criteria},
                 timeout=30,
             )
 
             if response.status_code != 200:
                 logger.warning(
-                    f"PropertyRadar search failed: HTTP {response.status_code}"
+                    f"PropertyRadar search failed: HTTP {response.status_code} - {response.text[:500]}"
                 )
                 return None
 
             data = response.json()
             results = data.get("results") or data.get("Results") or []
+
+            # Retry with Purchase=1 if preview mode yields nothing (some accounts may require purchase).
+            if not results:
+                response = requests.post(
+                    f"{self.base_url}/properties",
+                    headers=headers,
+                    params={**search_params, "Purchase": "1"},
+                    json={"Criteria": criteria},
+                    timeout=30,
+                )
+                if response.status_code != 200:
+                    logger.warning(
+                        f"PropertyRadar search (Purchase=1) failed: HTTP {response.status_code} - {response.text[:500]}"
+                    )
+                if response.status_code == 200:
+                    data = response.json()
+                    results = data.get("results") or data.get("Results") or []
 
             radar_id = None
             for item in results:
@@ -1275,7 +1310,7 @@ class PropertyRadarConnector(MLSConnector):
                         filter(
                             None,
                             [
-                                item.get("Address") or item.get("address"),
+                                item.get("Address") or item.get("Addre") or item.get("address"),
                                 item.get("City") or item.get("city"),
                                 item.get("State") or item.get("state"),
                                 item.get("ZipFive")
