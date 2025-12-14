@@ -77,12 +77,35 @@ class ATTOMConnector(MLSConnector):
         self.connected = False
         self._last_subject_from_v2: Optional[Property] = None
 
+        # Last HTTP breadcrumbing (for debugging UI/server issues without leaking secrets)
+        self.last_endpoint: Optional[str] = None
+        self.last_params: Optional[Dict[str, Any]] = None
+        self.last_status_code: Optional[int] = None
+        self.last_response_sample: Optional[str] = None
+        self.last_error: Optional[str] = None
+
         # Simple caches to avoid repeated API calls
         self._school_district_cache: Dict[str, str] = {}  # (lat,lon) -> district
         self._assessment_cache: Dict[str, Dict] = {}  # attom_id -> assessment data
         self._sale_detail_cache: Dict[str, Dict] = {}  # attom_id -> sale data
         self._avm_cache: Dict[str, Dict] = {}  # attom_id -> avm data
         self._community_cache: Dict[str, Dict] = {}  # geo_id -> community data
+
+    def _record_http_debug(
+        self,
+        *,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        status_code: Optional[int] = None,
+        response_text: Optional[str] = None,
+        error: Optional[str] = None,
+    ) -> None:
+        """Record last HTTP request/response metadata for debugging (no secrets)."""
+        self.last_endpoint = endpoint
+        self.last_params = params
+        self.last_status_code = status_code
+        self.last_response_sample = (response_text or "")[:800] if response_text else None
+        self.last_error = error
 
     def connect(self) -> bool:
         """Connect to ATTOM API (test connection)."""
@@ -131,6 +154,7 @@ class ATTOMConnector(MLSConnector):
             raise ConnectionError("Not connected to ATTOM API")
 
         try:
+            self.last_error = None
             headers = {
                 "apikey": self.api_key,
                 "Accept": "application/json",
@@ -142,6 +166,12 @@ class ATTOMConnector(MLSConnector):
                 url = f"{self.BASE_URL_V1}/property/detail"
                 params = {"attomid": attom_id, "debug": "True"}
                 response = requests.get(url, headers=headers, params=params, timeout=30)
+                self._record_http_debug(
+                    endpoint=url,
+                    params=params,
+                    status_code=response.status_code,
+                    response_text=response.text,
+                )
                 if response.status_code == 200:
                     data = response.json()
                     parsed = self._parse_property_detail(data)
@@ -170,6 +200,12 @@ class ATTOMConnector(MLSConnector):
 
             try:
                 response = requests.get(url, headers=headers, params=params, timeout=30)
+                self._record_http_debug(
+                    endpoint=url,
+                    params=params,
+                    status_code=response.status_code,
+                    response_text=response.text,
+                )
 
                 if response.status_code == 200:
                     data = response.json()
@@ -228,6 +264,12 @@ class ATTOMConnector(MLSConnector):
                     response = requests.get(
                         url, headers=headers, params=params, timeout=30
                     )
+                    self._record_http_debug(
+                        endpoint=url,
+                        params=params,
+                        status_code=response.status_code,
+                        response_text=response.text,
+                    )
                     if response.status_code == 200:
                         data = response.json()
                         return self._parse_property_detail(data)
@@ -252,14 +294,30 @@ class ATTOMConnector(MLSConnector):
             params = {"address": full_address.strip(), "debug": "True"}
             try:
                 response = requests.get(url, headers=headers, params=params, timeout=30)
+                self._record_http_debug(
+                    endpoint=url,
+                    params=params,
+                    status_code=response.status_code,
+                    response_text=response.text,
+                )
                 if response.status_code == 200:
                     data = response.json()
                     return self._parse_property_detail(data)
             except Exception as e:
+                self._record_http_debug(
+                    endpoint=url, params=params, status_code=None, response_text=None, error=str(e)
+                )
                 logger.error(f"Error calling basicprofile: {e}")
 
             return None
         except Exception as e:
+            self._record_http_debug(
+                endpoint="property_lookup",
+                params={"address": address, "city": city, "state": state, "zip": zip_code},
+                status_code=None,
+                response_text=None,
+                error=str(e),
+            )
             logger.error(f"Error getting property by address: {e}")
             return None
 
@@ -282,6 +340,12 @@ class ATTOMConnector(MLSConnector):
             }
 
             response = requests.get(url, headers=headers, params=params, timeout=30)
+            self._record_http_debug(
+                endpoint=url,
+                params=params,
+                status_code=response.status_code,
+                response_text=response.text,
+            )
 
             if response.status_code == 200:
                 data = response.json()
@@ -302,6 +366,12 @@ class ATTOMConnector(MLSConnector):
 
                 params = {"address": full_address.strip(), "debug": "True"}
                 response = requests.get(url, headers=headers, params=params, timeout=30)
+                self._record_http_debug(
+                    endpoint=url,
+                    params=params,
+                    status_code=response.status_code,
+                    response_text=response.text,
+                )
                 if response.status_code == 200:
                     data = response.json()
                     return self._parse_property_detail(data)
@@ -309,6 +379,7 @@ class ATTOMConnector(MLSConnector):
             response.raise_for_status()
             return None
         except Exception as e:
+            self.last_error = str(e)
             logger.error(f"Error in detail endpoint: {e}")
             return None
 
@@ -334,6 +405,7 @@ class ATTOMConnector(MLSConnector):
             raise ConnectionError("Not connected to ATTOM API")
 
         try:
+            self.last_error = None
             headers = {
                 "apikey": self.api_key,
                 "Accept": "application/json",
@@ -393,6 +465,12 @@ class ATTOMConnector(MLSConnector):
             logger.info(f"ATTOM API Params: {params}")
 
             response = requests.get(url, headers=headers, params=params, timeout=30)
+            self._record_http_debug(
+                endpoint=url,
+                params=params,
+                status_code=response.status_code,
+                response_text=response.text,
+            )
 
             # Log response status
             logger.info(f"ATTOM API Response Status: {response.status_code}")
@@ -403,6 +481,7 @@ class ATTOMConnector(MLSConnector):
                 logger.error(
                     f"ATTOM API Error {response.status_code}: {response.text[:500]}"
                 )
+                self.last_error = f"HTTP {response.status_code} from ATTOM SalesComparables"
                 # Try to parse error response
                 try:
                     error_data = response.json()
@@ -412,6 +491,7 @@ class ATTOMConnector(MLSConnector):
                         .get("msg", "Unknown error")
                     )
                     logger.error(f"ATTOM Error Message: {error_msg}")
+                    self.last_error = f"HTTP {response.status_code}: {error_msg}"
                 except:
                     pass
                 return []
@@ -450,6 +530,9 @@ class ATTOMConnector(MLSConnector):
                     if status_condition == "MinimumCompsNotMet" or status_code == "29":
                         logger.warning(
                             f"ATTOM API: Minimum comparables not met. {status_msg}"
+                        )
+                        self.last_error = (
+                            f"MinimumCompsNotMet: {status_msg}" if status_msg else "MinimumCompsNotMet"
                         )
                         logger.info(
                             "This usually means there aren't enough recent sales in the area matching the criteria."
@@ -551,12 +634,29 @@ class ATTOMConnector(MLSConnector):
             logger.error(f"Request error getting sales comparables: {e}")
             if hasattr(e, "response") and e.response is not None:
                 logger.error(f"Response: {e.response.text[:500]}")
+                self._record_http_debug(
+                    endpoint=self.last_endpoint or "SalesComparables",
+                    params=self.last_params,
+                    status_code=getattr(e.response, "status_code", None),
+                    response_text=getattr(e.response, "text", None),
+                    error=str(e),
+                )
+            else:
+                self._record_http_debug(
+                    endpoint=self.last_endpoint or "SalesComparables",
+                    params=self.last_params,
+                    status_code=None,
+                    response_text=None,
+                    error=str(e),
+                )
+            self.last_error = str(e)
             return []
         except Exception as e:
             logger.error(f"Error getting sales comparables: {e}")
             import traceback
 
             logger.error(traceback.format_exc())
+            self.last_error = str(e)
             return []
 
     def _parse_property_detail(self, data: Dict[str, Any]) -> Optional[Property]:
@@ -573,6 +673,25 @@ class ATTOMConnector(MLSConnector):
             building_size = building.get("size", {}) if building else {}
             assessment = prop.get("assessment", {})
             address_data = prop.get("address", {})
+            # ATTOM's internal property ID is needed for follow-on "detail" endpoints
+            # like assessment/detail, sale/detail, and attomavm/detail.
+            attom_id = None
+            if isinstance(identifier, dict):
+                attom_id = (
+                    identifier.get("attomId")
+                    or identifier.get("attomID")
+                    or identifier.get("attomid")
+                    or identifier.get("AttomId")
+                    or identifier.get("AttomID")
+                )
+            if not attom_id and isinstance(prop, dict):
+                attom_id = (
+                    prop.get("attomId")
+                    or prop.get("attomID")
+                    or prop.get("attomid")
+                    or prop.get("AttomId")
+                    or prop.get("AttomID")
+                )
             # Best-effort descriptive text (ATTOM often places remarks in descriptionExt/legal1)
             property_description = (
                 summary.get("descriptionExt")
@@ -1029,6 +1148,7 @@ class ATTOMConnector(MLSConnector):
                 mls_meta = dict(prop)
             mls_meta.update(
                 {
+                    "attom_id": attom_id,
                     "property_description": property_description,
                     "assessment_market_value": (
                         market_value if "market_value" in locals() else None
@@ -2955,7 +3075,7 @@ class ATTOMConnector(MLSConnector):
     # ============================================================================
 
     def enrich_property_with_additional_data(
-        self, property: Property, max_api_calls: int = 3
+        self, property: Property, max_api_calls: int = 5
     ) -> Property:
         """Enrich a property with data from additional ATTOM APIs."""
         if not self.connected or not property:
@@ -2966,7 +3086,14 @@ class ATTOMConnector(MLSConnector):
         # Skip enrichment if we already have all the key data we want
         has_school = bool(property.school_district)
         has_description = bool(property.description)
-        has_assessment = bool(property.mls_data and property.mls_data.get("assessment"))
+        has_assessment = bool(
+            property.mls_data
+            and (
+                property.mls_data.get("assessment_detail_data")
+                or property.mls_data.get("assessment_market_value") is not None
+                or property.mls_data.get("assessment_assessed_value") is not None
+            )
+        )
         has_sale_data = bool(
             property.mls_data and property.mls_data.get("sale_detail_data")
         )
@@ -2981,28 +3108,6 @@ class ATTOMConnector(MLSConnector):
         ):
             logger.debug("Property already has comprehensive data, skipping enrichment")
             return property
-
-        # Get coordinates for API calls that need them
-        lat = property.latitude
-        lon = property.longitude
-
-        if lat and lon:
-            # 1. School district lookup (if missing)
-            if not property.school_district and api_calls_made < max_api_calls:
-                school_district = self.get_school_district_by_location(lat, lon)
-                if school_district:
-                    property.school_district = school_district
-                    logger.info(f"✓ Added school district: {school_district}")
-                api_calls_made += 1
-
-            # 2. Community data (demographics, etc.) - if we want neighborhood stats
-            # This is optional as it's a lot of data and may not be needed for all properties
-            # if api_calls_made < max_api_calls:
-            #     community_data = self.get_community_detail(latitude=lat, longitude=lon)
-            #     if community_data:
-            #         property.mls_data["community_data"] = community_data
-            #         logger.info("✓ Added community data")
-            #     api_calls_made += 1
 
         # Get ATTOM ID for detailed lookups (if available)
         attom_id = None
@@ -3019,7 +3124,10 @@ class ATTOMConnector(MLSConnector):
         # But that would be another API call, so skip for now
 
         if attom_id:
-            # 3. Enhanced assessment data (more detailed than basic v1 assessment)
+            # Priority order: assessment -> sale -> AVM
+            # (AVM is commonly "missing" if we spend the budget on other lookups first)
+
+            # 1. Enhanced assessment data (more detailed than basic v1 assessment)
             if (
                 not property.mls_data.get("assessment_detail_data")
                 and api_calls_made < max_api_calls
@@ -3030,7 +3138,7 @@ class ATTOMConnector(MLSConnector):
                     logger.info("✓ Added enhanced assessment data")
                 api_calls_made += 1
 
-            # 4. Enhanced sale data
+            # 2. Enhanced sale data
             if (
                 not property.mls_data.get("sale_detail_data")
                 and api_calls_made < max_api_calls
@@ -3041,12 +3149,30 @@ class ATTOMConnector(MLSConnector):
                     logger.info("✓ Added enhanced sale data")
                 api_calls_made += 1
 
-            # 5. AVM data (automated valuation)
-            if not property.mls_data.get("avm_data") and api_calls_made < max_api_calls:
+            # 3. AVM data (automated valuation)
+            if (
+                not property.mls_data.get("avm_data")
+                and api_calls_made < max_api_calls
+            ):
                 avm_data = self.get_avm_detail(attom_id=attom_id)
                 if avm_data:
                     property.mls_data["avm_data"] = avm_data
                     logger.info("✓ Added AVM data")
                 api_calls_made += 1
+
+        # Secondary: school district lookup (needs lat/lon, and can be spotty)
+        lat = property.latitude
+        lon = property.longitude
+        if (
+            lat
+            and lon
+            and not property.school_district
+            and api_calls_made < max_api_calls
+        ):
+            school_district = self.get_school_district_by_location(lat, lon)
+            if school_district:
+                property.school_district = school_district
+                logger.info(f"✓ Added school district: {school_district}")
+            api_calls_made += 1
 
         return property

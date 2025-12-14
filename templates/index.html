@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Robo Comp | AI-Powered Property Valuations</title>
     <link rel="icon" type="image/png" href="/static/logo.png">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0a0a0f;
@@ -48,7 +51,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: 
+            background-image:
                 linear-gradient(rgba(0, 212, 170, 0.03) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(0, 212, 170, 0.03) 1px, transparent 1px);
             background-size: 50px 50px;
@@ -63,7 +66,7 @@
             width: 200%;
             height: 200%;
             background: radial-gradient(circle at 30% 20%, rgba(0, 212, 170, 0.08) 0%, transparent 40%),
-                        radial-gradient(circle at 70% 80%, rgba(102, 126, 234, 0.05) 0%, transparent 40%);
+                radial-gradient(circle at 70% 80%, rgba(102, 126, 234, 0.05) 0%, transparent 40%);
             pointer-events: none;
             z-index: 0;
         }
@@ -78,6 +81,7 @@
             align-items: center;
             border-bottom: 1px solid var(--border-color);
             background: rgba(10, 10, 15, 0.95);
+            -webkit-backdrop-filter: blur(20px);
             backdrop-filter: blur(20px);
         }
 
@@ -160,8 +164,17 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
         }
 
         .hero h1 {
@@ -338,7 +351,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Features Grid */
@@ -391,8 +406,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .results-header {
@@ -690,6 +712,7 @@
             width: 100%;
             height: 100%;
             background: rgba(10, 10, 15, 0.9);
+            -webkit-backdrop-filter: blur(10px);
             backdrop-filter: blur(10px);
             z-index: 1000;
             justify-content: center;
@@ -764,8 +787,15 @@
         }
 
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
 
         /* Responsive */
@@ -809,6 +839,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="bg-grid"></div>
     <div class="bg-glow"></div>
@@ -834,7 +865,7 @@
         </div>
         <h1>Instant Property <span>Valuations</span><br>Powered by AI</h1>
         <p class="hero-subtitle">
-            Leverage ATTOM, Zillow, and PropertyRadar data combined with machine learning 
+            Leverage ATTOM, Zillow, and PropertyRadar data combined with machine learning
             to get accurate comparable property analysis in seconds.
         </p>
     </section>
@@ -853,39 +884,38 @@
             <form id="searchForm">
                 <div class="form-grid">
                     <div class="form-group full-width">
-                        <label class="form-label">Street Address</label>
-                        <input type="text" class="form-input" id="address" name="address" 
-                               placeholder="e.g., 3644 E Constitution Dr" required>
+                        <label class="form-label" for="address">Street Address</label>
+                        <input type="text" class="form-input" id="address" name="address"
+                            placeholder="e.g., 3644 E Constitution Dr" required>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label class="form-label">City</label>
-                        <input type="text" class="form-input" id="city" name="city" 
-                               placeholder="e.g., Gilbert" required>
+                        <label class="form-label" for="city">City</label>
+                        <input type="text" class="form-input" id="city" name="city" placeholder="e.g., Gilbert"
+                            required>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label class="form-label">State</label>
-                        <input type="text" class="form-input" id="state" name="state" 
-                               placeholder="e.g., AZ" maxlength="2" required>
+                        <label class="form-label" for="state">State</label>
+                        <input type="text" class="form-input" id="state" name="state" placeholder="e.g., AZ"
+                            maxlength="2" required>
                     </div>
-                    
+
                     <div class="form-group">
-                        <label class="form-label">ZIP Code</label>
-                        <input type="text" class="form-input" id="zip" name="zip" 
-                               placeholder="e.g., 85296" maxlength="5">
+                        <label class="form-label" for="zip">ZIP Code</label>
+                        <input type="text" class="form-input" id="zip" name="zip" placeholder="e.g., 85296"
+                            maxlength="5">
                     </div>
-                    
+
                     <div class="form-group">
-                        <label class="form-label">Max Comps</label>
-                        <input type="number" class="form-input" id="max_comps" name="max_comps" 
-                               value="10" min="1" max="20">
+                        <label class="form-label" for="max_comps">Max Comps</label>
+                        <input type="number" class="form-input" id="max_comps" name="max_comps" value="10" min="1"
+                            max="20" placeholder="10">
                     </div>
-                    
+
                     <div class="form-group full-width">
-                        <label class="form-label">Email (Optional - receive PDF report)</label>
-                        <input type="email" class="form-input" id="email" name="email" 
-                               placeholder="your@email.com">
+                        <label class="form-label" for="email">Email (Optional - receive PDF report)</label>
+                        <input type="email" class="form-input" id="email" name="email" placeholder="your@email.com">
                     </div>
                 </div>
 
@@ -931,7 +961,7 @@
             </div>
             <div class="loading-step" id="step2">
                 <span class="loading-step-icon">○</span>
-                <span>Enriching with Zillow details...</span>
+                <span>Enriching with ATTOM details...</span>
             </div>
             <div class="loading-step" id="step3">
                 <span class="loading-step-icon">○</span>
@@ -950,26 +980,27 @@
     <!-- Footer -->
     <footer class="footer">
         <p class="footer-text">
-            © 2025 Robo Comp | A.I. for R.E. | Powered by <a href="#">ATTOM</a>, 
-            <a href="#">Zillow</a>, and <a href="#">PropertyRadar</a>
+            © 2025 Robo Comp | A.I. for R.E. | Powered by <a href="#">ATTOM</a>
         </p>
     </footer>
 
     <!-- Google Places Autocomplete -->
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initAutocomplete" async defer></script>
-    
+    <script
+        src="https://maps.googleapis.com/maps/api/js?key={{ google_maps_api_key }}&libraries=places&callback=initAutocomplete"
+        async defer></script>
+
     <script>
         let autocomplete;
-        
+
         function initAutocomplete() {
             const addressInput = document.getElementById('address');
-            
+
             autocomplete = new google.maps.places.Autocomplete(addressInput, {
                 types: ['address'],
                 componentRestrictions: { country: 'us' },
                 fields: ['address_components', 'formatted_address', 'geometry']
             });
-            
+
             // Style the autocomplete dropdown to match our dark theme
             const style = document.createElement('style');
             style.textContent = `
@@ -1010,22 +1041,22 @@
                 }
             `;
             document.head.appendChild(style);
-            
+
             // When user selects an address, auto-fill city, state, zip
-            autocomplete.addListener('place_changed', function() {
+            autocomplete.addListener('place_changed', function () {
                 const place = autocomplete.getPlace();
-                
+
                 if (!place.address_components) return;
-                
+
                 let streetNumber = '';
                 let streetName = '';
                 let city = '';
                 let state = '';
                 let zip = '';
-                
+
                 for (const component of place.address_components) {
                     const type = component.types[0];
-                    
+
                     switch (type) {
                         case 'street_number':
                             streetNumber = component.long_name;
@@ -1044,7 +1075,7 @@
                             break;
                     }
                 }
-                
+
                 // Update form fields
                 document.getElementById('address').value = `${streetNumber} ${streetName}`.trim();
                 document.getElementById('city').value = city;
@@ -1052,7 +1083,7 @@
                 document.getElementById('zip').value = zip;
             });
         }
-        
+
         const form = document.getElementById('searchForm');
         const submitBtn = document.getElementById('submitBtn');
         const loadingOverlay = document.getElementById('loadingOverlay');
@@ -1068,9 +1099,9 @@
         function updateLoadingStep(stepNum, status) {
             const step = document.getElementById(`step${stepNum}`);
             const icon = step.querySelector('.loading-step-icon');
-            
+
             step.classList.remove('active', 'complete');
-            
+
             if (status === 'active') {
                 step.classList.add('active');
                 icon.textContent = '◉';
@@ -1083,8 +1114,10 @@
         }
 
         function formatCurrency(value) {
-            if (!value) return 'N/A';
-            return '$' + value.toLocaleString('en-US', { maximumFractionDigits: 0 });
+            if (value === null || value === undefined) return 'N/A';
+            const n = Number(value);
+            if (Number.isNaN(n)) return 'N/A';
+            return '$' + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
         }
 
         function formatNumber(value) {
@@ -1093,22 +1126,116 @@
         }
 
         function formatPercent(value) {
-            if (!value && value !== 0) return 'N/A';
-            return (value * 100).toFixed(1) + '%';
+            if (value === null || value === undefined) return 'N/A';
+            const n = Number(value);
+            if (Number.isNaN(n)) return 'N/A';
+            return (n * 100).toFixed(1) + '%';
+        }
+
+        function formatDate(isoString) {
+            if (!isoString) return 'N/A';
+            const d = new Date(isoString);
+            if (Number.isNaN(d.getTime())) return 'N/A';
+            return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+        }
+
+        function formatList(values) {
+            if (!values) return 'N/A';
+            if (Array.isArray(values)) {
+                const cleaned = values.map(v => (v || '').toString().trim()).filter(Boolean);
+                return cleaned.length ? cleaned.join(', ') : 'N/A';
+            }
+            const s = values.toString().trim();
+            return s ? s : 'N/A';
+        }
+
+        function truncateText(text, maxLen = 260) {
+            if (!text) return '';
+            const s = text.toString().trim();
+            if (s.length <= maxLen) return s;
+            return s.slice(0, maxLen).trimEnd() + '…';
+        }
+
+        function findAvmNumber(obj, depth = 0, path = []) {
+            if (!obj || depth > 6) return null;
+            if (Array.isArray(obj)) {
+                for (let i = 0; i < obj.length; i++) {
+                    const found = findAvmNumber(obj[i], depth + 1, path.concat(`[${i}]`));
+                    if (found !== null && found !== undefined) return found;
+                }
+                return null;
+            }
+            if (typeof obj !== 'object') return null;
+
+            for (const [k, v] of Object.entries(obj)) {
+                const nextPath = path.concat(k);
+                if (typeof v === 'number') {
+                    const joined = nextPath.join('.').toLowerCase();
+                    // Avoid false positives like fsd (6.0) and scores; prefer explicit value fields.
+                    if (joined.includes('fsd') || joined.endsWith('.scr') || joined.includes('.scr.')) continue;
+                    if (joined.includes('avm') && (joined.includes('value') || joined.endsWith('.value') || joined.endsWith('avmvalue'))) {
+                        return v;
+                    }
+                }
+                const nested = findAvmNumber(v, depth + 1, nextPath);
+                if (nested !== null && nested !== undefined) return nested;
+            }
+            return null;
+        }
+
+        function extractAttomAvm(avmData) {
+            // ATTOM /attomavm/detail structure (what we see in practice):
+            // avm_data.property[0].avm.amount.{value, low, high, scr, fsd}
+            try {
+                const prop0 = Array.isArray(avmData?.property) ? avmData.property[0] : null;
+                const amount = prop0?.avm?.amount;
+                const value = amount?.value;
+                if (typeof value === 'number' && value > 1000) {
+                    return {
+                        value,
+                        low: typeof amount.low === 'number' ? amount.low : null,
+                        high: typeof amount.high === 'number' ? amount.high : null,
+                        score: typeof amount.scr === 'number' ? amount.scr : null
+                    };
+                }
+            } catch (e) {
+                // fall through to heuristic
+            }
+            const guessed = findAvmNumber(avmData);
+            if (typeof guessed === 'number' && guessed > 1000) {
+                return { value: guessed, low: null, high: null, score: null };
+            }
+            return null;
         }
 
         async function runLoadingAnimation() {
             const delays = [800, 1500, 2500, 3500];
             for (let i = 1; i <= 4; i++) {
-                setTimeout(() => updateLoadingStep(i, 'active'), delays[i-1] - 500);
-                setTimeout(() => updateLoadingStep(i, 'complete'), delays[i-1]);
+                setTimeout(() => updateLoadingStep(i, 'active'), delays[i - 1] - 500);
+                setTimeout(() => updateLoadingStep(i, 'complete'), delays[i - 1]);
             }
         }
 
         function renderResults(data) {
             const subject = data.subject_property;
             const comps = data.comparable_properties;
-            
+            const mls = subject.mls_data || {};
+
+            // ATTOM enrichment (from ATTOMConnector.enrich_property_with_additional_data)
+            const attomMarketValue = mls.assessment_market_value;
+            const attomAssessedValue = mls.assessment_assessed_value;
+            const attomAvmRaw = mls.avm_data;
+            const attomAvm = extractAttomAvm(attomAvmRaw);
+            const attomAvmValue = attomAvm ? attomAvm.value : null;
+
+            const dataSource = mls.data_source || mls.source;
+            const domSource = subject.days_on_market_source ?? subject.days_on_market ?? mls.days_on_market;
+            const domListing = subject.days_on_market_listing;
+            const domDisplay = (domSource !== null && domSource !== undefined) ? domSource : domListing;
+
+            const description = subject.property_description || subject.description || mls.property_description;
+            const descPreview = truncateText(description, 320);
+
             let html = `
                 <div class="value-card">
                     <div class="value-label">Estimated Property Value</div>
@@ -1155,6 +1282,10 @@
                     </div>
                     <div class="property-details">
                         <div class="detail-item">
+                            <span class="detail-label">Status</span>
+                            <span class="detail-value">${subject.status || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
                             <span class="detail-label">Year Built</span>
                             <span class="detail-value">${subject.year_built || 'N/A'}</span>
                         </div>
@@ -1163,8 +1294,24 @@
                             <span class="detail-value">${subject.lot_size_sqft ? formatNumber(subject.lot_size_sqft) + ' sqft' : 'N/A'}</span>
                         </div>
                         <div class="detail-item">
+                            <span class="detail-label">Lot Acres</span>
+                            <span class="detail-value">${(subject.lot_size_acres !== null && subject.lot_size_acres !== undefined) ? Number(subject.lot_size_acres).toFixed(2) + ' ac' : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
                             <span class="detail-label">Stories</span>
                             <span class="detail-value">${subject.stories || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Rooms</span>
+                            <span class="detail-value">${subject.total_rooms || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Parking</span>
+                            <span class="detail-value">${(subject.parking_spaces !== null && subject.parking_spaces !== undefined) ? subject.parking_spaces : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Garage Type</span>
+                            <span class="detail-value">${subject.garage_type || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
                             <span class="detail-label">Cooling</span>
@@ -1183,8 +1330,56 @@
                             <span class="detail-value">${subject.architectural_style || 'N/A'}</span>
                         </div>
                         <div class="detail-item">
+                            <span class="detail-label">School District</span>
+                            <span class="detail-value">${subject.school_district || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
                             <span class="detail-label">Last Sale</span>
                             <span class="detail-value">${subject.sold_price ? formatCurrency(subject.sold_price) : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Last Sale Date</span>
+                            <span class="detail-value">${formatDate(subject.sold_date)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">List Price</span>
+                            <span class="detail-value">${subject.list_price ? formatCurrency(subject.list_price) : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">List Date</span>
+                            <span class="detail-value">${formatDate(subject.list_date)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Days on Market</span>
+                            <span class="detail-value">${(domDisplay !== null && domDisplay !== undefined) ? domDisplay : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">ATTOM AVM</span>
+                            <span class="detail-value">${attomAvmValue ? formatCurrency(attomAvmValue) : (attomAvmRaw ? 'Available' : 'N/A')}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">ATTOM Assessment (Market)</span>
+                            <span class="detail-value">${attomMarketValue ? formatCurrency(Number(attomMarketValue)) : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">ATTOM Assessment (Assessed)</span>
+                            <span class="detail-value">${attomAssessedValue ? formatCurrency(Number(attomAssessedValue)) : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Amenities</span>
+                            <span class="detail-value">${formatList(subject.amenities)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Exterior Features</span>
+                            <span class="detail-value">${formatList(subject.exterior_features)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Data Source</span>
+                            <span class="detail-value">${dataSource || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Description</span>
+                            <span class="detail-value">${descPreview || 'N/A'}</span>
                         </div>
                     </div>
                 </div>
@@ -1214,6 +1409,10 @@
                                     <div class="comp-stat-label">Sold Price</div>
                                 </div>
                                 <div class="comp-stat">
+                                    <div class="comp-stat-value">${comp.adjusted_price ? formatCurrency(comp.adjusted_price) : 'N/A'}</div>
+                                    <div class="comp-stat-label">Adjusted Price</div>
+                                </div>
+                                <div class="comp-stat">
                                     <div class="comp-stat-value">${comp.bedrooms || 'N/A'}</div>
                                     <div class="comp-stat-label">Beds</div>
                                 </div>
@@ -1233,6 +1432,10 @@
                                     <div class="comp-stat-value">${comp.year_built || 'N/A'}</div>
                                     <div class="comp-stat-label">Year</div>
                                 </div>
+                                <div class="comp-stat">
+                                    <div class="comp-stat-value">${(comp.adjustment_count !== null && comp.adjustment_count !== undefined) ? comp.adjustment_count : 'N/A'}</div>
+                                    <div class="comp-stat-label">Adjustments</div>
+                                </div>
                             </div>
                         </div>
                     `).join('')}
@@ -1246,7 +1449,7 @@
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const formData = {
                 address: document.getElementById('address').value,
                 city: document.getElementById('city').value,
@@ -1260,7 +1463,7 @@
             submitBtn.classList.add('loading');
             loadingOverlay.classList.add('active');
             resultsSection.classList.remove('active');
-            
+
             // Reset loading steps
             for (let i = 1; i <= 4; i++) updateLoadingStep(i, 'pending');
             runLoadingAnimation();
@@ -1280,11 +1483,11 @@
 
                 // Complete all steps
                 for (let i = 1; i <= 4; i++) updateLoadingStep(i, 'complete');
-                
+
                 setTimeout(() => {
                     loadingOverlay.classList.remove('active');
                     renderResults(data);
-                    
+
                     if (data.email_sent) {
                         showToast('✓ Report sent to your email!');
                     } else if (data.email_error) {
@@ -1301,5 +1504,5 @@
         });
     </script>
 </body>
-</html>
 
+</html>

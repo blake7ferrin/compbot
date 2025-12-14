@@ -9,6 +9,7 @@ from flask import Flask, jsonify, render_template, request, send_from_directory
 from bot import MLSCompBot
 from config import settings
 from report_generator import ReportGenerator
+from models import Property
 
 # Configure logging to both console and file
 logging.basicConfig(
@@ -23,9 +24,11 @@ logging.basicConfig(
 # Get the directory where app.py is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-app = Flask(__name__, 
-            static_folder=os.path.join(BASE_DIR, 'static'),
-            template_folder=os.path.join(BASE_DIR, 'templates'))
+app = Flask(
+    __name__,
+    static_folder=os.path.join(BASE_DIR, "static"),
+    template_folder=os.path.join(BASE_DIR, "templates"),
+)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "robocomp-secret-key-2025")
 
 # Initialize bot (will connect on first use)
@@ -37,8 +40,99 @@ def get_bot():
     global bot
     if bot is None:
         bot = MLSCompBot()
-        bot.connect()
+        if not bot.connect():
+            # Make failures obvious (usually missing ATTOM_API_KEY)
+            raise RuntimeError(
+                "Failed to connect to ATTOM API. Set ATTOM_API_KEY in your .env and restart the server."
+            )
     return bot
+
+
+def _mask_secret(value: str, keep: int = 4) -> str:
+    """Mask a secret for safe display in debug/status endpoints."""
+    if not value:
+        return ""
+    value = str(value)
+    if len(value) <= keep:
+        return "*" * len(value)
+    return f"{value[:keep]}{'*' * (len(value) - keep)}"
+
+
+def _missing_fields(prop: Property, fields: list[str]) -> list[str]:
+    """Return a list of field names that are missing/empty on a Property."""
+    missing: list[str] = []
+    data = prop.model_dump()
+    for field in fields:
+        value = data.get(field)
+        if value is None:
+            missing.append(field)
+            continue
+        if isinstance(value, str) and not value.strip():
+            missing.append(field)
+            continue
+        if isinstance(value, list) and len(value) == 0:
+            missing.append(field)
+            continue
+        if isinstance(value, dict) and len(value) == 0:
+            missing.append(field)
+            continue
+    return missing
+
+
+@app.route("/api/status")
+def api_status():
+    """Lightweight status endpoint to help debug config/runtime issues (no secrets)."""
+    try:
+        attom_key = settings.attom_api_key or ""
+        bot_connected = False
+        connector_status = {}
+        attom_debug_path = os.path.join(os.getcwd(), "attom_response_debug.json")
+        flask_log_path = os.path.join(os.getcwd(), "flask_app.log")
+
+        global bot
+        if bot is not None:
+            bot_connected = bool(getattr(bot, "connected", False))
+            connector = getattr(bot, "connector", None)
+            if connector is not None:
+                connector_status = {
+                    "connected": bool(getattr(connector, "connected", False)),
+                    "last_status_code": getattr(connector, "last_status_code", None),
+                    "last_error": getattr(connector, "last_error", None),
+                    "last_endpoint": getattr(connector, "last_endpoint", None),
+                }
+
+        return jsonify(
+            {
+                "success": True,
+                "cwd": os.getcwd(),
+                "env_file_present": os.path.exists(os.path.join(os.getcwd(), ".env")),
+                "attom_response_debug_present": os.path.exists(attom_debug_path),
+                "attom_response_debug_size": (
+                    os.path.getsize(attom_debug_path)
+                    if os.path.exists(attom_debug_path)
+                    else None
+                ),
+                "flask_app_log_present": os.path.exists(flask_log_path),
+                "flask_app_log_size": (
+                    os.path.getsize(flask_log_path)
+                    if os.path.exists(flask_log_path)
+                    else None
+                ),
+                "attom_api_key_configured": bool(attom_key),
+                "attom_api_key_masked": (
+                    _mask_secret(attom_key, keep=4) if attom_key else ""
+                ),
+                "estated_enabled": bool(
+                    settings.estated_enabled and settings.estated_api_key
+                ),
+                "bot_initialized": bot is not None,
+                "bot_connected": bot_connected,
+                "connector": connector_status,
+            }
+        )
+    except Exception as e:
+        logging.error(f"Error in /api/status: {e}", exc_info=True)
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route("/")
@@ -214,7 +308,10 @@ def search():
             return jsonify({"error": "Address, city, and state are required"}), 400
 
         # Get bot and search
-        bot_instance = get_bot()
+        try:
+            bot_instance = get_bot()
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
         result = bot_instance.find_comps_for_property(
             address=address,
             city=city,
@@ -224,10 +321,72 @@ def search():
         )
 
         if not result:
+            # Provide a more actionable error message depending on what failed.
+            connector = getattr(bot_instance, "connector", None)
+            status_code = (
+                getattr(connector, "last_status_code", None) if connector else None
+            )
+            connector_error = (
+                getattr(connector, "last_error", None) if connector else None
+            )
+            bot_error = getattr(bot_instance, "last_error", None)
+
+            if status_code in (401, 403):
+                msg = "ATTOM rejected the request (401/403). Verify ATTOM_API_KEY and that your plan includes this endpoint."
+                return (
+                    jsonify(
+                        {
+                            "error": msg,
+                            "details": connector_error,
+                            "bot_error": bot_error,
+                        }
+                    ),
+                    502,
+                )
+            if status_code == 429:
+                msg = "ATTOM rate limit reached (429). Wait a bit and try again."
+                return (
+                    jsonify(
+                        {
+                            "error": msg,
+                            "details": connector_error,
+                            "bot_error": bot_error,
+                        }
+                    ),
+                    502,
+                )
+            if bot_error and str(bot_error).startswith("subject_not_found"):
+                msg = "ATTOM could not find that subject property. Double-check the address, and try including the ZIP code."
+                return (
+                    jsonify(
+                        {
+                            "error": msg,
+                            "details": connector_error,
+                            "bot_error": bot_error,
+                        }
+                    ),
+                    404,
+                )
+            if bot_error and str(bot_error).startswith("no_comps"):
+                msg = "ATTOM returned no comps for that property with current criteria. Try increasing radius or widening the sale date range."
+                return (
+                    jsonify(
+                        {
+                            "error": msg,
+                            "details": connector_error,
+                            "bot_error": bot_error,
+                        }
+                    ),
+                    404,
+                )
+
+            # Generic fallback
             return (
                 jsonify(
                     {
-                        "error": "Could not find comparable properties. Try adjusting your search criteria."
+                        "error": "Could not find comparable properties. Try adjusting your search criteria.",
+                        "details": connector_error,
+                        "bot_error": bot_error,
                     }
                 ),
                 404,
@@ -250,6 +409,16 @@ def search():
         logging.info("=" * 80)
 
         # Convert result to JSON-serializable format
+        debug_enabled = str(request.args.get("debug", "")).lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+
+        # Full dumps (helpful for debugging + ensures the UI can access any field we add later)
+        subject_full = result.subject_property.model_dump(mode="json")
+        comps_full = [cp.model_dump(mode="json") for cp in result.comparable_properties]
+
         output = {
             "subject_property": {
                 "address": result.subject_property.address,
@@ -258,6 +427,11 @@ def search():
                 "zip_code": result.subject_property.zip_code,
                 "mls_number": result.subject_property.mls_number,
                 "property_type": result.subject_property.property_type.value,
+                "status": (
+                    result.subject_property.status.value
+                    if getattr(result.subject_property, "status", None) is not None
+                    else None
+                ),
                 "bedrooms": result.subject_property.bedrooms,
                 "bathrooms": result.subject_property.bathrooms,
                 "bathrooms_full": result.subject_property.bathrooms_full,
@@ -289,22 +463,41 @@ def search():
                 "list_price": result.subject_property.list_price,
                 "sold_price": result.subject_property.sold_price,
                 "price_per_sqft": result.subject_property.price_per_sqft,
+                "list_date": (
+                    result.subject_property.list_date.isoformat()
+                    if result.subject_property.list_date
+                    else None
+                ),
                 "sold_date": (
                     result.subject_property.sold_date.isoformat()
                     if result.subject_property.sold_date
                     else None
                 ),
+                # Backward compatible: historically this endpoint exposed the "source DOM"
+                # from mls_data under the days_on_market key.
+                "days_on_market": (
+                    result.subject_property.mls_data.get("days_on_market")
+                    if result.subject_property.mls_data
+                    else None
+                ),
+                # New: listing-level DOM on the Property model (if present)
+                "days_on_market_listing": result.subject_property.days_on_market,
                 "sale_recency_days": result.subject_property.sale_recency_days,
                 "seller_concessions": result.subject_property.seller_concessions,
                 "seller_concessions_description": result.subject_property.seller_concessions_description,
                 "financing_type": result.subject_property.financing_type,
                 "arms_length_transaction": result.subject_property.arms_length_transaction,
+                "latitude": result.subject_property.latitude,
+                "longitude": result.subject_property.longitude,
+                "photos": result.subject_property.photos,
+                "features": result.subject_property.features,
+                "description": result.subject_property.description,
                 "street_view_url": result.subject_property.street_view_url,
                 "street_view_image_url": result.subject_property.street_view_image_url,
                 # Pass through any source metadata (e.g., Oxylabs DOM/description)
                 "mls_data": result.subject_property.mls_data,
                 # Convenience fields for UI
-                "days_on_market": (
+                "days_on_market_source": (
                     result.subject_property.mls_data.get("days_on_market")
                     if result.subject_property.mls_data
                     else None
@@ -355,11 +548,22 @@ def search():
                     "sold_price": cp.property.sold_price,
                     "list_price": cp.property.list_price,
                     "price_per_sqft": cp.property.price_per_sqft,
+                    "list_date": (
+                        cp.property.list_date.isoformat()
+                        if cp.property.list_date
+                        else None
+                    ),
                     "sold_date": (
                         cp.property.sold_date.isoformat()
                         if cp.property.sold_date
                         else None
                     ),
+                    "days_on_market": (
+                        cp.property.mls_data.get("days_on_market")
+                        if cp.property.mls_data
+                        else None
+                    ),
+                    "days_on_market_listing": cp.property.days_on_market,
                     "sale_recency_days": cp.property.sale_recency_days,
                     "seller_concessions": cp.property.seller_concessions,
                     "seller_concessions_description": cp.property.seller_concessions_description,
@@ -368,11 +572,17 @@ def search():
                     "price_difference": cp.price_difference,
                     "price_difference_percent": cp.price_difference_percent,
                     "match_reasons": cp.match_reasons,
+                    "adjustment_count": cp.adjustment_count,
+                    "total_adjustment_amount": cp.total_adjustment_amount,
+                    "adjusted_price": cp.adjusted_price,
+                    "adjustments": [
+                        adj.model_dump(mode="json") for adj in cp.adjustments
+                    ],
                     "street_view_url": cp.property.street_view_url,
                     "street_view_image_url": cp.property.street_view_image_url,
                     # Source metadata (e.g., Oxylabs)
                     "mls_data": cp.property.mls_data,
-                    "days_on_market": (
+                    "days_on_market_source": (
                         cp.property.mls_data.get("days_on_market")
                         if cp.property.mls_data
                         else None
@@ -389,7 +599,42 @@ def search():
             "average_price_per_sqft": result.average_price_per_sqft,
             "estimated_value": result.estimated_value,
             "confidence_score": result.confidence_score,
+            "subject_property_full": subject_full,
+            "comparable_properties_full": comps_full,
         }
+
+        if debug_enabled:
+            # High-signal fields that users typically expect to be present
+            key_fields = [
+                "bedrooms",
+                "bathrooms",
+                "square_feet",
+                "year_built",
+                "lot_size_sqft",
+                "parking_spaces",
+                "heating_type",
+                "cooling_type",
+                "roof_material",
+                "school_district",
+                "list_price",
+                "sold_price",
+                "sold_date",
+            ]
+            output["debug"] = {
+                "subject_missing_fields": _missing_fields(
+                    result.subject_property, key_fields
+                ),
+                "subject_data_source": (
+                    (result.subject_property.mls_data or {}).get("data_source")
+                    or (result.subject_property.mls_data or {}).get("source")
+                ),
+                "connector_last_status_code": getattr(
+                    getattr(bot_instance, "connector", None), "last_status_code", None
+                ),
+                "connector_last_endpoint": getattr(
+                    getattr(bot_instance, "connector", None), "last_endpoint", None
+                ),
+            }
 
         # Send email report if email provided
         email_sent = False

@@ -85,6 +85,7 @@ class MLSCompBot:
         self.trainer = CompTrainer(self.analyzer)
         self.guidelines_trainer = CompGuidelinesTrainer(self.analyzer)
         self.connected = False
+        self.last_error: Optional[str] = None
 
     def connect(self) -> bool:
         """Connect to ATTOM API."""
@@ -94,10 +95,12 @@ class MLSCompBot:
             self.connected = success
             if success:
                 logger.info("Bot connected to ATTOM API successfully")
+                self.last_error = None
             return success
         except Exception as e:
             logger.error(f"Failed to connect to ATTOM API: {e}")
             self.connected = False
+            self.last_error = f"connect_failed: {e}"
             return False
 
     def disconnect(self):
@@ -116,8 +119,10 @@ class MLSCompBot:
         max_comps: Optional[int] = None,
     ) -> Optional[CompResult]:
         """Find comparable properties for a given property using ATTOM."""
+        self.last_error = None
         if not self.connected:
             logger.error("Not connected to ATTOM API. Call connect() first.")
+            self.last_error = "not_connected"
             return None
 
         # Get subject property - ATTOM requires address-based lookup
@@ -145,6 +150,15 @@ class MLSCompBot:
 
         if not subject:
             logger.error("Could not find subject property in ATTOM database")
+            # Preserve any connector-provided detail if available
+            connector_error = (
+                getattr(self.connector, "last_error", None) if self.connector else None
+            )
+            self.last_error = (
+                f"subject_not_found: {connector_error}"
+                if connector_error
+                else "subject_not_found"
+            )
             return None
 
         logger.info(
@@ -226,6 +240,13 @@ class MLSCompBot:
             )
             if candidates:
                 logger.info(f"Found {len(candidates)} candidates with relaxed criteria")
+            else:
+                connector_error = (
+                    getattr(self.connector, "last_error", None) if self.connector else None
+                )
+                self.last_error = (
+                    f"no_comps: {connector_error}" if connector_error else "no_comps"
+                )
 
         logger.info(f"Found {len(candidates)} candidate properties")
 
@@ -441,7 +462,7 @@ class MLSCompBot:
 
             # Enrich with additional ATTOM APIs (School, Assessment, Sale, AVM)
             subject = self.connector.enrich_property_with_additional_data(
-                subject, max_api_calls=3
+                subject, max_api_calls=5
             )
 
         else:
@@ -508,153 +529,6 @@ class MLSCompBot:
                         logger.warning("Estated API did not return property data")
                 except Exception as e:
                     logger.warning(f"Estated API fallback failed: {e}")
-
-        # Try Oxylabs Web Scraper as fallback if bedrooms/bathrooms are still missing
-        # NOTE: This scrapes Redfin/Zillow - be aware of ToS considerations
-        if (
-            settings.oxylabs_enabled
-            and settings.oxylabs_username
-            and settings.oxylabs_password
-        ):
-            if subject.bedrooms is None or subject.bathrooms is None:
-                try:
-                    from alternative_apis import OxylabsScraperConnector
-
-                    logger.info(
-                        "Attempting to fetch missing data from Oxylabs (scraping Redfin/Zillow)..."
-                    )
-                    oxylabs = OxylabsScraperConnector(
-                        settings.oxylabs_username, settings.oxylabs_password
-                    )
-                    oxylabs.connect()
-                    oxylabs_prop = oxylabs.get_property_by_address(
-                        subject.address, subject.city, subject.state, subject.zip_code
-                    )
-
-                    if oxylabs_prop:
-                        # Fill in missing bedrooms
-                        if (
-                            subject.bedrooms is None
-                            and oxylabs_prop.bedrooms is not None
-                        ):
-                            subject.bedrooms = oxylabs_prop.bedrooms
-                            logger.info(
-                                f"✓ Got bedrooms from Oxylabs: {oxylabs_prop.bedrooms}"
-                            )
-
-                        # Fill in missing bathrooms
-                        if (
-                            subject.bathrooms is None
-                            and oxylabs_prop.bathrooms is not None
-                        ):
-                            subject.bathrooms = oxylabs_prop.bathrooms
-                            logger.info(
-                                f"✓ Got bathrooms from Oxylabs: {oxylabs_prop.bathrooms}"
-                            )
-
-                        # Fill in other missing fields if available
-                        if subject.square_feet is None and oxylabs_prop.square_feet:
-                            subject.square_feet = oxylabs_prop.square_feet
-                        if subject.lot_size_sqft is None and oxylabs_prop.lot_size_sqft:
-                            subject.lot_size_sqft = oxylabs_prop.lot_size_sqft
-                        if subject.year_built is None and oxylabs_prop.year_built:
-                            subject.year_built = oxylabs_prop.year_built
-                        if subject.list_price is None and oxylabs_prop.list_price:
-                            subject.list_price = oxylabs_prop.list_price
-                        
-                        # NEW: Extract additional fields from Oxylabs/Zillow
-                        if subject.cooling_type is None and oxylabs_prop.cooling_type:
-                            subject.cooling_type = oxylabs_prop.cooling_type
-                            logger.info(f"✓ Got cooling type from Oxylabs: {oxylabs_prop.cooling_type}")
-                        if subject.heating_type is None and oxylabs_prop.heating_type:
-                            subject.heating_type = oxylabs_prop.heating_type
-                            logger.info(f"✓ Got heating type from Oxylabs: {oxylabs_prop.heating_type}")
-                        if subject.roof_material is None and oxylabs_prop.roof_material:
-                            subject.roof_material = oxylabs_prop.roof_material
-                        if subject.architectural_style is None and oxylabs_prop.architectural_style:
-                            subject.architectural_style = oxylabs_prop.architectural_style
-                            logger.info(f"✓ Got architectural style from Oxylabs: {oxylabs_prop.architectural_style}")
-                        if subject.stories is None and oxylabs_prop.stories:
-                            subject.stories = oxylabs_prop.stories
-                        if subject.parking_spaces is None and oxylabs_prop.parking_spaces:
-                            subject.parking_spaces = oxylabs_prop.parking_spaces
-                        if not subject.amenities and oxylabs_prop.amenities:
-                            subject.amenities = oxylabs_prop.amenities
-                        if not subject.exterior_features and oxylabs_prop.exterior_features:
-                            subject.exterior_features = oxylabs_prop.exterior_features
-                        
-                        # Merge mls_data for additional fields (HOA, subdivision, etc.)
-                        if oxylabs_prop.mls_data:
-                            if not subject.mls_data:
-                                subject.mls_data = {}
-                            oxylabs_extras = oxylabs_prop.mls_data
-                            if oxylabs_extras.get("hoa_fee"):
-                                subject.mls_data["hoa_fee"] = oxylabs_extras["hoa_fee"]
-                                logger.info(f"✓ Got HOA fee from Oxylabs: ${oxylabs_extras['hoa_fee']}/mo")
-                            if oxylabs_extras.get("subdivision"):
-                                subject.mls_data["subdivision"] = oxylabs_extras["subdivision"]
-                            if oxylabs_extras.get("has_pool"):
-                                subject.mls_data["has_pool"] = oxylabs_extras["has_pool"]
-                            subject.mls_data["oxylabs_source"] = oxylabs_extras.get("source", "oxylabs")
-                    else:
-                        logger.warning("Oxylabs did not return property data")
-                except Exception as e:
-                    logger.warning(f"Oxylabs fallback failed: {e}")
-
-        # Try PropertyRadar API for investor data (equity, liens, ownership)
-        # NOTE: PropertyRadar excels at investor data but may not have bedrooms
-        if settings.propertyradar_enabled and settings.propertyradar_api_key:
-            try:
-                from alternative_apis import PropertyRadarConnector
-
-                logger.info(
-                    "Attempting to fetch investor data from PropertyRadar API..."
-                )
-                pr_connector = PropertyRadarConnector(settings.propertyradar_api_key)
-                pr_connector.connect()
-                
-                # PropertyRadar is best for investor data, merge with existing
-                pr_prop = pr_connector.get_property_by_address(
-                    subject.address, subject.city, subject.state, subject.zip_code
-                )
-
-                if pr_prop and pr_prop.mls_data:
-                    if not subject.mls_data:
-                        subject.mls_data = {}
-                    
-                    pr_data = pr_prop.mls_data
-                    
-                    # Investor data that ATTOM/Oxylabs don't have
-                    if pr_data.get("avm"):
-                        subject.mls_data["propertyradar_avm"] = pr_data["avm"]
-                        logger.info(f"✓ Got AVM from PropertyRadar: ${pr_data['avm']:,}")
-                    if pr_data.get("available_equity"):
-                        subject.mls_data["available_equity"] = pr_data["available_equity"]
-                        logger.info(f"✓ Got equity from PropertyRadar: ${pr_data['available_equity']:,}")
-                    if pr_data.get("is_free_and_clear"):
-                        subject.mls_data["is_free_and_clear"] = True
-                        logger.info("✓ Property is FREE AND CLEAR (no mortgage)")
-                    if pr_data.get("is_cash_buyer"):
-                        subject.mls_data["is_cash_buyer"] = True
-                    if pr_data.get("is_absentee_owner"):
-                        subject.mls_data["is_absentee_owner"] = True
-                    if pr_data.get("subdivision") and not subject.mls_data.get("subdivision"):
-                        subject.mls_data["subdivision"] = pr_data["subdivision"]
-                    if pr_data.get("zoning"):
-                        subject.mls_data["zoning"] = pr_data["zoning"]
-                    
-                    # Fill physical data if still missing
-                    if subject.bathrooms is None and pr_prop.bathrooms:
-                        subject.bathrooms = pr_prop.bathrooms
-                    if subject.stories is None and pr_prop.stories:
-                        subject.stories = pr_prop.stories
-                    if subject.roof_material is None and pr_prop.roof_material:
-                        subject.roof_material = pr_prop.roof_material
-                    
-                    subject.mls_data["propertyradar_source"] = True
-                    logger.info("✓ PropertyRadar investor data merged successfully")
-            except Exception as e:
-                logger.warning(f"PropertyRadar fallback failed: {e}")
 
         # Estimate bedrooms/bathrooms from square footage if still missing
         if (
