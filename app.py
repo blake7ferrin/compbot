@@ -135,6 +135,11 @@ def api_status():
                 "maricopa_assessor_api_key_configured": bool(
                     settings.maricopa_assessor_api_key
                 ),
+                "maricopa_assessor_api_key_masked": (
+                    _mask_secret(settings.maricopa_assessor_api_key, keep=4)
+                    if settings.maricopa_assessor_api_key
+                    else ""
+                ),
                 "bot_initialized": bot is not None,
                 "bot_connected": bot_connected,
                 "connector": connector_status,
