@@ -530,6 +530,79 @@ class MLSCompBot:
                 except Exception as e:
                     logger.warning(f"Estated API fallback failed: {e}")
 
+        # Maricopa County Assessor API (AZ-only) - enrichment for missing county-record fields.
+        # This is optional and disabled by default.
+        if (
+            settings.maricopa_assessor_enabled
+            and settings.maricopa_assessor_base_url
+            and (subject.state or "").strip().upper() == "AZ"
+        ):
+            # Only call if we actually have gaps that assessor data can commonly fill.
+            needs_maricopa = any(
+                [
+                    subject.year_built is None,
+                    subject.lot_size_sqft is None,
+                    subject.square_feet is None,
+                ]
+            )
+            if needs_maricopa:
+                try:
+                    from maricopa_assessor_connector import MaricopaAssessorConnector
+
+                    logger.info(
+                        "Attempting to enrich missing fields from Maricopa County Assessor API..."
+                    )
+                    maricopa = MaricopaAssessorConnector()
+                    if maricopa.connect():
+                        mc_prop = maricopa.get_property_by_address(
+                            subject.address,
+                            subject.city,
+                            subject.state,
+                            subject.zip_code,
+                        )
+                        if mc_prop:
+                            # Fill missing fields only
+                            if subject.year_built is None and mc_prop.year_built:
+                                subject.year_built = mc_prop.year_built
+                                logger.info(
+                                    f"✓ Got year_built from Maricopa Assessor: {mc_prop.year_built}"
+                                )
+                            if (
+                                subject.lot_size_sqft is None
+                                and mc_prop.lot_size_sqft is not None
+                            ):
+                                subject.lot_size_sqft = mc_prop.lot_size_sqft
+                                logger.info(
+                                    f"✓ Got lot_size_sqft from Maricopa Assessor: {mc_prop.lot_size_sqft}"
+                                )
+                            if subject.square_feet is None and mc_prop.square_feet:
+                                subject.square_feet = mc_prop.square_feet
+                                logger.info(
+                                    f"✓ Got square_feet from Maricopa Assessor: {mc_prop.square_feet}"
+                                )
+
+                            # Preserve any debug/source metadata
+                            if subject.mls_data is None:
+                                subject.mls_data = {}
+                            subject.mls_data.setdefault("source_enrichment", [])
+                            try:
+                                if "maricopa_assessor" not in subject.mls_data["source_enrichment"]:
+                                    subject.mls_data["source_enrichment"].append("maricopa_assessor")
+                            except Exception:
+                                # If user-provided data overwrote mls_data type, don't fail the request.
+                                subject.mls_data["source_enrichment"] = ["maricopa_assessor"]
+                            subject.mls_data["maricopa_assessor"] = mc_prop.mls_data
+                        else:
+                            logger.warning(
+                                f"Maricopa Assessor did not return data (status={maricopa.last_status_code}, error={maricopa.last_error})"
+                            )
+                    else:
+                        logger.warning(
+                            "Maricopa Assessor connector not enabled/configured correctly (missing base_url or disabled)."
+                        )
+                except Exception as e:
+                    logger.warning(f"Maricopa Assessor enrichment failed: {e}")
+
         # Estimate bedrooms/bathrooms from square footage if still missing
         if (
             subject.bedrooms is None or subject.bathrooms is None

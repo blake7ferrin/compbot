@@ -1,4 +1,5 @@
 """Configuration management for MLS Comp Bot."""
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Literal
 import os
@@ -33,6 +34,21 @@ class Settings(BaseSettings):
     # PropertyRadar API (optional - investor data: equity, liens, ownership)
     propertyradar_api_key: str = ""
     propertyradar_enabled: bool = False  # Set to True to enable PropertyRadar
+
+    # Maricopa County Assessor API (optional - AZ county records enrichment)
+    # Intended for Arizona (Maricopa County) addresses to fill gaps like APN,
+    # year built, lot size, assessed value, last transfer, etc.
+    maricopa_assessor_enabled: bool = False
+    maricopa_assessor_base_url: str = "https://mcassessor.maricopa.gov"
+    maricopa_assessor_api_key: str = ""
+    # Per official docs: header name is AUTHORIZATION with value = token
+    maricopa_assessor_api_key_header: str = "AUTHORIZATION"
+    # Optional alternative to header auth (some proxies wrap the API)
+    maricopa_assessor_api_key_query_param: str = ""
+    # Official search endpoint uses q= query
+    maricopa_assessor_search_path: str = "/search/property/"
+    maricopa_assessor_address_param: str = "q"
+    maricopa_assessor_timeout_seconds: int = 30
 
     # Broker/Agent Branding for Reports
     broker_name: str = "Dallas Wormley"
@@ -69,4 +85,3 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
-

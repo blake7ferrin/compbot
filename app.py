@@ -125,6 +125,16 @@ def api_status():
                 "estated_enabled": bool(
                     settings.estated_enabled and settings.estated_api_key
                 ),
+                "maricopa_assessor_enabled": bool(
+                    settings.maricopa_assessor_enabled
+                    and settings.maricopa_assessor_base_url
+                ),
+                "maricopa_assessor_base_url_configured": bool(
+                    settings.maricopa_assessor_base_url
+                ),
+                "maricopa_assessor_api_key_configured": bool(
+                    settings.maricopa_assessor_api_key
+                ),
                 "bot_initialized": bot is not None,
                 "bot_connected": bot_connected,
                 "connector": connector_status,
